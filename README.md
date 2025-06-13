@@ -14,6 +14,7 @@ Python ortamı için gerekli paketler
 Bütün kurulum işlemleri tamamlandıysa main.py yi derleyip çalıştırın.
 Known_Face klasörüne eklenen resimler ile kamera görüntülerini karşılaştırıp yoklama.csv dosyasına tarih, saat ve giriş olarak kayıt eder.
 start_attendance_function.txt dosyasında 2 fonksiyon vardır. Kafanızın etrafında kutu görmek istiyorsanız Green_face_recognition fonksiyonunu start_attendance fonksiyonu ile değiştirin.
+-------------------------------------------------------------------------------
 --English--
 Requirements
 Install the appropriate Cmake installation on your computer. https://cmake.org/download/ 
