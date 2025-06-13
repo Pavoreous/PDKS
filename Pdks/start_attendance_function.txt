@@ -1,0 +1,228 @@
+---------------------------------------------------Green_face_recognition_function--------------------------------------------------
+def start_attendance():
+    cap = cv2.VideoCapture(0)
+    messagebox.showinfo("Bilgi", "GİRİŞ kaydı başladı. Bilinen yüzler otomatik GİRİŞ yapılır.\nBilinmeyen yüz için 'P', çıkış için 'Q' tuşu kullanılabilir.")
+
+    known_encodings = []
+    known_names = []
+
+    for filename in os.listdir("known_faces"):
+        if filename.lower().endswith((".jpg", ".jpeg", ".png")):
+            path = os.path.join("known_faces", filename)
+            image = face_recognition.load_image_file(path)
+            encodings = face_recognition.face_encodings(image)
+            if encodings:
+                known_encodings.append(encodings[0])
+                known_names.append(os.path.splitext(filename)[0])
+
+    last_recorded_name = None
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            messagebox.showerror("Hata", "Kamera görüntüsü alınamadı.")
+            break
+
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        face_locations = face_recognition.face_locations(rgb_frame)
+        face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
+
+        current_names = []
+
+        for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
+            matches = face_recognition.compare_faces(known_encodings, face_encoding, tolerance=0.5)
+            name = "Bilinmeyen"
+
+            if True in matches:
+                first_match_index = matches.index(True)
+                name = known_names[first_match_index]
+
+            current_names.append(name)
+
+            # Ekranda çizim
+            cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
+            cv2.rectangle(frame, (left, bottom - 20), (right, bottom), (0, 255, 0), cv2.FILLED)
+            cv2.putText(frame, name, (left + 6, bottom - 6),
+                        cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 0, 0), 1)
+
+            # Bilinen ve son kayıttan farklı ise kayıt yap
+            if name != "Bilinmeyen" and name != last_recorded_name:
+                now = datetime.datetime.now()
+                date_str = now.strftime("%d.%m.%Y")
+                time_str = now.strftime("%H:%M:%S")
+
+                with open("yoklama.csv", "a", newline="", encoding="utf-8-sig") as file:
+                    writer = csv.writer(file)
+                    writer.writerow([name, time_str, date_str, "Giriş"])
+
+                messagebox.showinfo("Yoklama", f"{name} için GİRİŞ işlemi kaydedildi.")
+                last_recorded_name = name
+
+        cv2.imshow("Giris Kamerasi (Bilinmeyen icin P, Cikis icin Q)", frame)
+        key = cv2.waitKey(1) & 0xFF
+
+        # Bilinmeyen kişi için kayıt
+        if key == ord('p'):
+            if len(face_encodings) != 1:
+                messagebox.showwarning("Uyarı", "Lütfen yalnızca bir yüzle kameraya bakın.")
+                continue
+
+            face_encoding = face_encodings[0]
+            matches = face_recognition.compare_faces(known_encodings, face_encoding, tolerance=0.5)
+            name = "Bilinmeyen"
+
+            if True in matches:
+                continue  # Zaten biliniyor, tekrar kayıt etme
+
+            name_input = simpledialog.askstring("Yeni Kişi", "Bilinmeyen yüz tespit edildi. İsim Soyisim girin:")
+            if not name_input or len(name_input.strip().split()) < 2:
+                messagebox.showerror("Hata", "Geçersiz isim.")
+                continue
+
+            name = name_input.strip()
+            filename = f"{name}.jpg"
+            filepath = os.path.join("known_faces", filename)
+            cv2.imwrite(filepath, frame)
+            messagebox.showinfo("Kayıt Başarılı", f"{name} klasöre eklendi.")
+
+            known_encodings.append(face_encoding)
+            known_names.append(name)
+
+            now = datetime.datetime.now()
+            date_str = now.strftime("%d.%m.%Y")
+            time_str = now.strftime("%H:%M:%S")
+
+            with open("yoklama.csv", "a", newline="", encoding="utf-8-sig") as file:
+                writer = csv.writer(file)
+                writer.writerow([name, time_str, date_str, "Giriş"])
+
+            messagebox.showinfo("Yoklama", f"{name} için GİRİŞ işlemi kaydedildi.")
+            last_recorded_name = name
+
+        elif key == ord('q'):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
+-----------------------------------------------------default function--------------------------------------------------
+def start_attendance():
+    cap = cv2.VideoCapture(0)
+    messagebox.showinfo("Bilgi", "GİRİŞ kaydı başladı. Bilinen yüzler otomatik GİRİŞ yapılır.\nBilinmeyen yüz için 'P', çıkış için 'Q' tuşu kullanılabilir.")
+
+    known_encodings = []
+    known_names = []
+
+    for filename in os.listdir("known_faces"):
+        if filename.lower().endswith((".jpg", ".jpeg", ".png")):
+            path = os.path.join("known_faces", filename)
+            image = face_recognition.load_image_file(path)
+            encodings = face_recognition.face_encodings(image)
+            if encodings:
+                known_encodings.append(encodings[0])
+                known_names.append(os.path.splitext(filename)[0])
+
+    last_recorded_name = None
+    frame_count = 0  # 👈 Frame sayacı
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            messagebox.showerror("Hata", "Kamera görüntüsü alınamadı.")
+            break
+
+        frame_count += 1
+        if frame_count % 5 != 0:
+            # Sadece her 5 karede bir işlem yap
+            cv2.imshow("Giris Kamerasi (Bilinmeyen icin P, Cikis icin Q)", frame)
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord('q'):
+                break
+            continue
+
+        small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)  # 👈 Görüntüyü küçült
+        rgb_small_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
+
+        face_locations = face_recognition.face_locations(rgb_small_frame, model='hog')
+        face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
+
+        current_names = []
+
+        for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
+            matches = face_recognition.compare_faces(known_encodings, face_encoding, tolerance=0.5)
+            name = "Bilinmeyen"
+
+            if True in matches:
+                first_match_index = matches.index(True)
+                name = known_names[first_match_index]
+
+            current_names.append(name)
+
+            # Koordinatları geri büyüt (çünkü küçültmüştük)
+            top *= 4
+            right *= 4
+            bottom *= 4
+            left *= 4
+
+            # Ekranda çizim
+            cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
+            cv2.rectangle(frame, (left, bottom - 20), (right, bottom), (0, 255, 0), cv2.FILLED)
+            cv2.putText(frame, name, (left + 6, bottom - 6),
+                        cv2.FONT_HERSHEY_DUPLEX, 0.6, (0, 0, 0), 1)
+
+            # Bilinen ve son kayıttan farklı ise kayıt yap
+            if name != "Bilinmeyen" and name != last_recorded_name:
+                now = datetime.datetime.now()
+                date_str = now.strftime("%d.%m.%Y")
+                time_str = now.strftime("%H:%M:%S")
+
+                with open("yoklama.csv", "a", newline="", encoding="utf-8-sig") as file:
+                    writer = csv.writer(file)
+                    writer.writerow([name, time_str, date_str, "Giriş"])
+
+                messagebox.showinfo("Yoklama", f"{name} için GİRİŞ işlemi kaydedildi.")
+                last_recorded_name = name
+
+        cv2.imshow("Giris Kamerasi (Bilinmeyen icin P, Cikis icin Q)", frame)
+        key = cv2.waitKey(1) & 0xFF
+
+        if key == ord('p'):
+            if len(face_encodings) != 1:
+                messagebox.showwarning("Uyarı", "Lütfen yalnızca bir yüzle kameraya bakın.")
+                continue
+
+            face_encoding = face_encodings[0]
+            matches = face_recognition.compare_faces(known_encodings, face_encoding, tolerance=0.5)
+            name = "Bilinmeyen"
+
+            if True in matches:
+                continue  # Zaten biliniyor, tekrar kayıt etme
+
+            name_input = simpledialog.askstring("Yeni Kişi", "Bilinmeyen yüz tespit edildi. İsim Soyisim girin:")
+            if not name_input or len(name_input.strip().split()) < 2:
+                messagebox.showerror("Hata", "Geçersiz isim.")
+                continue
+
+            name = name_input.strip()
+            filename = f"{name}.jpg"
+            filepath = os.path.join("known_faces", filename)
+            cv2.imwrite(filepath, frame)
+            messagebox.showinfo("Kayıt Başarılı", f"{name} klasöre eklendi.")
+            known_encodings.append(face_encoding)
+            known_names.append(name)
+
+            now = datetime.datetime.now()
+            date_str = now.strftime("%d.%m.%Y")
+            time_str = now.strftime("%H:%M:%S")
+
+            with open("yoklama.csv", "a", newline="", encoding="utf-8-sig") as file:
+                writer = csv.writer(file)
+                writer.writerow([name, time_str, date_str, "Giriş"])
+
+            messagebox.showinfo("Yoklama", f"{name} için GİRİŞ işlemi kaydedildi.")
+            last_recorded_name = name
+
+        elif key == ord('q'):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
